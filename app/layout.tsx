@@ -11,8 +11,8 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title,
     description,
-    openGraph: { title, description, images: [`${origin}/og.png`] },
-    twitter: { card: "summary_large_image", title, description, images: [`${origin}/og.png`] },
+    openGraph: { title, description, images: [`${origin}/og-v2.png`] },
+    twitter: { card: "summary_large_image", title, description, images: [`${origin}/og-v2.png`] },
   };
 }
 
