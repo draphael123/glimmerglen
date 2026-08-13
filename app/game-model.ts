@@ -39,6 +39,12 @@ export function requestWaitDays(day: number, nextRequestDay: number) {
   return Math.max(0, Math.ceil(nextRequestDay - day));
 }
 
+export function proportionalTrade(available: number, cost: number, reward: number) {
+  if (cost <= 0) return { spent: 0, received: 0 };
+  const spent = Math.min(Math.max(0, available), cost);
+  return { spent, received: Math.floor(reward * spent / cost) };
+}
+
 export function policyModifiers(policy: "balanced" | "harvest" | "arcane") {
   if (policy === "harvest") return { food: 1.25, mana: 1, craft: 1, joy: 0 };
   if (policy === "arcane") return { food: 1, mana: 1.3, craft: 0.9, joy: 0 };
@@ -112,19 +118,25 @@ const ACHIEVEMENT_NAMES = new Set(["Green Fingers", "Wayfinder", "Well Beloved",
 export function isValidSave(value: unknown) {
   if (!value || typeof value !== "object") return false;
   const save = value as Record<string, unknown>;
-  if (!save.resources || typeof save.resources !== "object" || !Array.isArray(save.buildings)) return false;
+  if (!save.resources || typeof save.resources !== "object" || !Array.isArray(save.buildings) || save.buildings.length > 96) return false;
   const resources = save.resources as Record<string, unknown>;
   if (!RESOURCE_NAMES.every((name) => typeof resources[name] === "number" && Number.isFinite(resources[name]) && Number.isInteger(resources[name]) && resources[name] >= 0)) return false;
   if (!["day", "renown", "chapter"].every((name) => typeof save[name] === "number" && Number.isFinite(save[name]) && (save[name] as number) >= 0)) return false;
-  if (!Number.isInteger(save.day as number) || !Number.isInteger(save.chapter as number)) return false;
+  if (!Number.isInteger(save.day as number) || (save.day as number) < 1 || !Number.isInteger(save.renown as number) || !Number.isInteger(save.chapter as number)) return false;
   if ((save.chapter as number) > 2 || (save.deeds !== undefined && (typeof save.deeds !== "number" || !Number.isInteger(save.deeds) || save.deeds < 0))) return false;
   if (save.speed !== undefined && save.speed !== 1 && save.speed !== 2) return false;
   if (save.sound !== undefined && typeof save.sound !== "boolean") return false;
   if (save.earned !== undefined && (!Array.isArray(save.earned) || new Set(save.earned).size !== save.earned.length || !save.earned.every((name) => typeof name === "string" && ACHIEVEMENT_NAMES.has(name)))) return false;
-  if (save.history !== undefined && (!Array.isArray(save.history) || save.history.length > 8 || !save.history.every((entry) => entry && typeof entry === "object" && typeof (entry as Record<string, unknown>).day === "number" && typeof (entry as Record<string, unknown>).text === "string"))) return false;
+  if (save.history !== undefined && (!Array.isArray(save.history) || save.history.length > 8 || !save.history.every((entry) => {
+    if (!entry || typeof entry !== "object") return false;
+    const record = entry as Record<string, unknown>;
+    return Number.isInteger(record.day as number) && (record.day as number) >= 1 && (record.day as number) <= (save.day as number)
+      && typeof record.text === "string" && record.text.length > 0 && record.text.length <= 300;
+  }))) return false;
   if (save.policy !== undefined && !["balanced", "harvest", "arcane"].includes(save.policy as string)) return false;
   if (save.continued !== undefined && typeof save.continued !== "boolean") return false;
-  if (save.nextRequestDay !== undefined && (!Number.isInteger(save.nextRequestDay as number) || (save.nextRequestDay as number) < 1)) return false;
+  if (save.nextRequestDay !== undefined && (!Number.isInteger(save.nextRequestDay as number) || (save.nextRequestDay as number) < 1 || (save.nextRequestDay as number) > (save.day as number) + 4)) return false;
+  if (save.lastVisitorDay !== undefined && (!Number.isInteger(save.lastVisitorDay as number) || (save.lastVisitorDay as number) < 0 || (save.lastVisitorDay as number) > (save.day as number))) return false;
   const ids = new Set<number>();
   const positions = new Set<string>();
   return save.buildings.every((item) => {
@@ -132,7 +144,7 @@ export function isValidSave(value: unknown) {
     const building = item as Record<string, unknown>;
     const id = building.id as number;
     const position = `${building.x},${building.y}`;
-    const valid = Number.isInteger(id) && BUILDING_KINDS.has(building.kind as string)
+    const valid = Number.isInteger(id) && id >= 1 && BUILDING_KINDS.has(building.kind as string)
       && Number.isInteger(building.x as number) && (building.x as number) >= 0 && (building.x as number) < 12
       && Number.isInteger(building.y as number) && (building.y as number) >= 0 && (building.y as number) < 8
       && Number.isInteger(building.level as number) && (building.level as number) >= 1 && (building.level as number) <= 3;

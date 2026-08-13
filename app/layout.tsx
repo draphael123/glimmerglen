@@ -13,8 +13,9 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title,
     description,
+    alternates: { canonical: origin },
     icons: { icon: "/favicon.svg" },
-    openGraph: { title, description, images: [`${origin}/og-v2.png`] },
+    openGraph: { title, description, images: [{ url: `${origin}/og-v2.png`, width: 1536, height: 1024, alt: "A moonlit storybook view of the enchanted town of Glimmerglen" }] },
     twitter: { card: "summary_large_image", title, description, images: [`${origin}/og-v2.png`] },
   };
 }

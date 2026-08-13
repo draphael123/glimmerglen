@@ -1,2 +1,2 @@
 @import "tailwindcss";
-*{box-sizing:border-box} html,body{margin:0;min-height:100%;background:#172522;color:#f4edcf}button{font:inherit}body{overflow-x:hidden}
+*{box-sizing:border-box} html,body{margin:0;min-height:100%;background:#172522;color:#f4edcf}button{font:inherit;touch-action:manipulation}body{overflow-x:hidden}

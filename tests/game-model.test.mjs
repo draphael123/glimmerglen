@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { advanceTownDay, buildingProduction, calculateJoy, canAfford, clampResource, cottageResidents, isValidSave, moraleMultiplier, nextVisitorDay, policyModifiers, rankMultiplier, requestWaitDays, roadMultiplier, scoreTitle, seasonalFoodIncome, townScore, upgradeSalvage, visitorForDay, wellFoodBonus } from "../app/game-model.ts";
+import { advanceTownDay, buildingProduction, calculateJoy, canAfford, clampResource, cottageResidents, isValidSave, moraleMultiplier, nextVisitorDay, policyModifiers, proportionalTrade, rankMultiplier, requestWaitDays, roadMultiplier, scoreTitle, seasonalFoodIncome, townScore, upgradeSalvage, visitorForDay, wellFoodBonus } from "../app/game-model.ts";
 
 test("affordability checks every requested resource", () => {
   assert.equal(canAfford({ wood: 20, stone: 5 }, { wood: 16, stone: 5 }), true);
@@ -90,6 +90,8 @@ test("save validation accepts a real chronicle and rejects damaged data", () => 
   };
   assert.equal(isValidSave(valid), true);
   assert.equal(isValidSave({ ...valid, chapter: 9 }), false);
+  assert.equal(isValidSave({ ...valid, day: 0 }), false);
+  assert.equal(isValidSave({ ...valid, renown: 2.5 }), false);
   assert.equal(isValidSave({ ...valid, resources: { ...valid.resources, food: -1 } }), false);
   assert.equal(isValidSave({ ...valid, buildings: [{ id: 1, kind: "castle", x: 4, y: 3, level: 1 }] }), false);
   assert.equal(isValidSave({ ...valid, buildings: [{ id: 1, kind: "farm", x: 4, y: 3, level: 1 }, { id: 2, kind: "well", x: 4, y: 3, level: 1 }] }), false);
@@ -99,12 +101,17 @@ test("save validation accepts a real chronicle and rejects damaged data", () => 
   assert.equal(isValidSave({ ...valid, earned: ["Dragon Tamer"] }), false);
   assert.equal(isValidSave({ ...valid, history: [{ day: 3, text: "A visitor arrived." }] }), true);
   assert.equal(isValidSave({ ...valid, history: [{ day: "soon", text: "A visitor arrived." }] }), false);
+  assert.equal(isValidSave({ ...valid, history: [{ day: 99, text: "A visitor arrived." }] }), false);
   assert.equal(isValidSave({ ...valid, policy: "arcane" }), true);
   assert.equal(isValidSave({ ...valid, policy: "plunder" }), false);
   assert.equal(isValidSave({ ...valid, continued: "yes" }), false);
   assert.equal(isValidSave({ ...valid, buildings: [{ id: 1, kind: "farm", x: 4.5, y: 3, level: 1 }] }), false);
   assert.equal(isValidSave({ ...valid, nextRequestDay: 4 }), true);
   assert.equal(isValidSave({ ...valid, nextRequestDay: -1 }), false);
+  assert.equal(isValidSave({ ...valid, nextRequestDay: 99 }), false);
+  assert.equal(isValidSave({ ...valid, lastVisitorDay: 7 }), true);
+  assert.equal(isValidSave({ ...valid, lastVisitorDay: 2.5 }), false);
+  assert.equal(isValidSave({ ...valid, lastVisitorDay: 99 }), false);
   assert.equal(isValidSave("not a chronicle"), false);
 });
 
@@ -126,4 +133,11 @@ test("town requests expose a clear four-day recovery window", () => {
   assert.equal(requestWaitDays(12, 16), 4);
   assert.equal(requestWaitDays(16, 16), 0);
   assert.equal(requestWaitDays(20, 16), 0);
+});
+
+test("storm bargains scale down when the town cannot pay the full cost", () => {
+  assert.deepEqual(proportionalTrade(18, 18, 28), { spent: 18, received: 28 });
+  assert.deepEqual(proportionalTrade(9, 18, 28), { spent: 9, received: 14 });
+  assert.deepEqual(proportionalTrade(0, 18, 28), { spent: 0, received: 0 });
+  assert.deepEqual(proportionalTrade(10, 0, 28), { spent: 0, received: 0 });
 });
