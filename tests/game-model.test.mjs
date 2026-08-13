@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { calculateJoy, canAfford, clampResource, isValidSave, moraleMultiplier, roadMultiplier, scoreTitle, townScore } from "../app/game-model.ts";
+import { calculateJoy, canAfford, clampResource, cottageResidents, isValidSave, moraleMultiplier, rankMultiplier, roadMultiplier, scoreTitle, townScore, visitorForDay, wellFoodBonus } from "../app/game-model.ts";
 
 test("affordability checks every requested resource", () => {
   assert.equal(canAfford({ wood: 20, stone: 5 }, { wood: 16, stone: 5 }), true);
@@ -11,6 +11,19 @@ test("affordability checks every requested resource", () => {
 test("roads grant exactly a 25 percent production multiplier", () => {
   assert.equal(roadMultiplier(false), 1);
   assert.equal(roadMultiplier(true), 1.25);
+});
+
+test("every building rank has a bounded gameplay effect", () => {
+  assert.deepEqual([1, 2, 3].map(rankMultiplier), [1, 1.5, 2]);
+  assert.equal(rankMultiplier(9), 2);
+  assert.deepEqual([1, 2, 3].map(wellFoodBonus), [2, 4, 6]);
+  assert.deepEqual([1, 2, 3].map(cottageResidents), [2, 4, 6]);
+});
+
+test("story visitors continue to return after the opening chapter", () => {
+  assert.deepEqual([7, 15, 23, 31].map(visitorForDay), ["merchant", "spirit", "druid", "storm"]);
+  assert.deepEqual([43, 55, 67, 79, 91].map(visitorForDay), ["merchant", "spirit", "druid", "storm", "merchant"]);
+  assert.equal(visitorForDay(44), null);
 });
 
 test("morale thresholds reward joy and penalize serious unhappiness", () => {
@@ -43,6 +56,9 @@ test("save validation accepts a real chronicle and rejects damaged data", () => 
   assert.equal(isValidSave({ ...valid, resources: { ...valid.resources, food: -1 } }), false);
   assert.equal(isValidSave({ ...valid, buildings: [{ id: 1, kind: "castle", x: 4, y: 3, level: 1 }] }), false);
   assert.equal(isValidSave({ ...valid, speed: 5 }), false);
+  assert.equal(isValidSave({ ...valid, earned: ["Wayfinder", 7] }), false);
+  assert.equal(isValidSave({ ...valid, history: [{ day: 3, text: "A visitor arrived." }] }), true);
+  assert.equal(isValidSave({ ...valid, history: [{ day: "soon", text: "A visitor arrived." }] }), false);
   assert.equal(isValidSave("not a chronicle"), false);
 });
 

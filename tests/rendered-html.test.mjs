@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 async function render() {
@@ -34,4 +35,11 @@ test("renders an accessible interactive map", async () => {
   assert.match(html, /aria-label="Build Moonwheat Field at 3, 1"/);
   assert.match(html, /aria-label="Pause time"/);
   assert.match(html, /aria-label="Town resources"/);
+  assert.match(html, /role="grid"/);
+});
+
+test("responsive styles keep objectives visible on tablet layouts", async () => {
+  const css = await readFile(new URL("../app/game.css", import.meta.url), "utf8");
+  assert.match(css, /grid-template-areas:"chapter goals request stats"/);
+  assert.doesNotMatch(css, /\.quest-panel\{display:none\}/);
 });

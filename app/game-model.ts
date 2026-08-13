@@ -8,6 +8,26 @@ export function roadMultiplier(linked: boolean) {
   return linked ? 1.25 : 1;
 }
 
+export function rankMultiplier(level: number) {
+  return 1 + (Math.max(1, Math.min(3, level)) - 1) * 0.5;
+}
+
+export function wellFoodBonus(level: number) {
+  return Math.max(0, Math.min(3, level)) * 2;
+}
+
+export function cottageResidents(level: number) {
+  return Math.max(1, Math.min(3, level)) * 2;
+}
+
+export function visitorForDay(day: number) {
+  const visitors = ["merchant", "spirit", "druid", "storm"] as const;
+  const openingIndex = [7, 15, 23, 31].indexOf(day);
+  if (openingIndex >= 0) return visitors[openingIndex];
+  if (day > 31 && (day - 31) % 12 === 0) return visitors[Math.floor((day - 43) / 12) % visitors.length];
+  return null;
+}
+
 export function moraleMultiplier(joy: number) {
   if (joy >= 80) return 1.1;
   if (joy < 45) return 0.8;
@@ -32,6 +52,8 @@ export function isValidSave(value: unknown) {
   if ((save.chapter as number) > 2 || (save.deeds !== undefined && (typeof save.deeds !== "number" || save.deeds < 0))) return false;
   if (save.speed !== undefined && save.speed !== 1 && save.speed !== 2) return false;
   if (save.sound !== undefined && typeof save.sound !== "boolean") return false;
+  if (save.earned !== undefined && (!Array.isArray(save.earned) || !save.earned.every((name) => typeof name === "string"))) return false;
+  if (save.history !== undefined && (!Array.isArray(save.history) || save.history.length > 8 || !save.history.every((entry) => entry && typeof entry === "object" && typeof (entry as Record<string, unknown>).day === "number" && typeof (entry as Record<string, unknown>).text === "string"))) return false;
   return save.buildings.every((item) => {
     if (!item || typeof item !== "object") return false;
     const building = item as Record<string, unknown>;
