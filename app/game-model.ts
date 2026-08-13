@@ -28,6 +28,47 @@ export function visitorForDay(day: number) {
   return null;
 }
 
+export function policyModifiers(policy: "balanced" | "harvest" | "arcane") {
+  if (policy === "harvest") return { food: 1.25, mana: 1, craft: 1, joy: 0 };
+  if (policy === "arcane") return { food: 1, mana: 1.3, craft: 0.9, joy: 0 };
+  return { food: 1, mana: 1, craft: 1, joy: 4 };
+}
+
+export function buildingProduction(input: {
+  kind: "road" | "cottage" | "farm" | "lumber" | "quarry" | "well" | "shrine" | "market" | "tower";
+  level: number;
+  linked?: boolean;
+  morale?: number;
+  terrainBonus?: boolean;
+  enchanted?: boolean;
+  wellRank?: number;
+}) {
+  const output = { wood: 0, stone: 0, food: 0, mana: 0, glory: 0 };
+  const level = Math.max(1, Math.min(3, input.level));
+  const flow = rankMultiplier(level) * roadMultiplier(Boolean(input.linked)) * (input.morale ?? 1);
+  if (input.kind === "lumber") output.wood = (4 + (input.terrainBonus ? 2 : 0)) * flow;
+  if (input.kind === "quarry") output.stone = (3 + (input.terrainBonus ? 2 : 0)) * flow;
+  if (input.kind === "farm") output.food = (4 + (input.enchanted ? 4 : 0) + wellFoodBonus(input.wellRank ?? 0)) * flow;
+  if (input.kind === "shrine") output.mana = 2 * flow;
+  if (input.kind === "tower") { output.mana = 5 * flow; output.glory = level; }
+  if (input.kind === "cottage") output.food = -level;
+  return output;
+}
+
+export function advanceTownDay(
+  resources: { wood: number; stone: number; food: number; mana: number; folk: number },
+  income: { wood: number; stone: number; food: number; mana: number },
+) {
+  const food = clampResource(resources.food + income.food);
+  return {
+    wood: clampResource(resources.wood + income.wood),
+    stone: clampResource(resources.stone + income.stone),
+    food,
+    mana: clampResource(resources.mana + income.mana),
+    folk: food === 0 && resources.folk > 2 ? resources.folk - 1 : resources.folk,
+  };
+}
+
 export function moraleMultiplier(joy: number) {
   if (joy >= 80) return 1.1;
   if (joy < 45) return 0.8;
@@ -54,13 +95,23 @@ export function isValidSave(value: unknown) {
   if (save.sound !== undefined && typeof save.sound !== "boolean") return false;
   if (save.earned !== undefined && (!Array.isArray(save.earned) || !save.earned.every((name) => typeof name === "string"))) return false;
   if (save.history !== undefined && (!Array.isArray(save.history) || save.history.length > 8 || !save.history.every((entry) => entry && typeof entry === "object" && typeof (entry as Record<string, unknown>).day === "number" && typeof (entry as Record<string, unknown>).text === "string"))) return false;
+  if (save.policy !== undefined && !["balanced", "harvest", "arcane"].includes(save.policy as string)) return false;
+  if (save.continued !== undefined && typeof save.continued !== "boolean") return false;
+  const ids = new Set<number>();
+  const positions = new Set<string>();
   return save.buildings.every((item) => {
     if (!item || typeof item !== "object") return false;
     const building = item as Record<string, unknown>;
-    return typeof building.id === "number" && BUILDING_KINDS.has(building.kind as string)
+    const id = building.id as number;
+    const position = `${building.x},${building.y}`;
+    const valid = typeof id === "number" && BUILDING_KINDS.has(building.kind as string)
       && typeof building.x === "number" && building.x >= 0 && building.x < 12
       && typeof building.y === "number" && building.y >= 0 && building.y < 8
       && typeof building.level === "number" && building.level >= 1 && building.level <= 3;
+    if (!valid || ids.has(id) || positions.has(position)) return false;
+    ids.add(id);
+    positions.add(position);
+    return true;
   });
 }
 
