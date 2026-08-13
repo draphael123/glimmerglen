@@ -28,6 +28,17 @@ export function visitorForDay(day: number) {
   return null;
 }
 
+export function nextVisitorDay(day: number) {
+  for (let candidate = Math.max(1, Math.floor(day) + 1); candidate <= day + 20; candidate += 1) {
+    if (visitorForDay(candidate)) return candidate;
+  }
+  return null;
+}
+
+export function requestWaitDays(day: number, nextRequestDay: number) {
+  return Math.max(0, Math.ceil(nextRequestDay - day));
+}
+
 export function policyModifiers(policy: "balanced" | "harvest" | "arcane") {
   if (policy === "harvest") return { food: 1.25, mana: 1, craft: 1, joy: 0 };
   if (policy === "arcane") return { food: 1, mana: 1.3, craft: 0.9, joy: 0 };
@@ -69,6 +80,20 @@ export function advanceTownDay(
   };
 }
 
+export function upgradeSalvage(level: number) {
+  let wood = 0;
+  let stone = 0;
+  for (let rank = 1; rank < Math.max(1, Math.min(3, level)); rank += 1) {
+    wood += 6 * rank;
+    stone += 4 * rank;
+  }
+  return { wood, stone };
+}
+
+export function seasonalFoodIncome(production: number, upkeep: number, seasonMultiplier: number, policyMultiplier = 1) {
+  return Math.floor(Math.max(0, production) * seasonMultiplier * policyMultiplier) + Math.min(0, upkeep);
+}
+
 export function moraleMultiplier(joy: number) {
   if (joy >= 80) return 1.1;
   if (joy < 45) return 0.8;
@@ -81,6 +106,7 @@ export function clampResource(value: number) {
 
 const RESOURCE_NAMES = ["wood", "stone", "food", "mana", "folk"] as const;
 const BUILDING_KINDS = new Set(["road", "cottage", "farm", "lumber", "quarry", "well", "shrine", "market", "tower"]);
+const ACHIEVEMENT_NAMES = new Set(["Green Fingers", "Wayfinder", "Well Beloved", "Old Magic", "Promise Keeper", "Vale of Legend"]);
 
 /** Keep a corrupt or stale browser save from breaking the whole game on load. */
 export function isValidSave(value: unknown) {
@@ -88,15 +114,17 @@ export function isValidSave(value: unknown) {
   const save = value as Record<string, unknown>;
   if (!save.resources || typeof save.resources !== "object" || !Array.isArray(save.buildings)) return false;
   const resources = save.resources as Record<string, unknown>;
-  if (!RESOURCE_NAMES.every((name) => typeof resources[name] === "number" && Number.isFinite(resources[name]) && resources[name] >= 0)) return false;
+  if (!RESOURCE_NAMES.every((name) => typeof resources[name] === "number" && Number.isFinite(resources[name]) && Number.isInteger(resources[name]) && resources[name] >= 0)) return false;
   if (!["day", "renown", "chapter"].every((name) => typeof save[name] === "number" && Number.isFinite(save[name]) && (save[name] as number) >= 0)) return false;
-  if ((save.chapter as number) > 2 || (save.deeds !== undefined && (typeof save.deeds !== "number" || save.deeds < 0))) return false;
+  if (!Number.isInteger(save.day as number) || !Number.isInteger(save.chapter as number)) return false;
+  if ((save.chapter as number) > 2 || (save.deeds !== undefined && (typeof save.deeds !== "number" || !Number.isInteger(save.deeds) || save.deeds < 0))) return false;
   if (save.speed !== undefined && save.speed !== 1 && save.speed !== 2) return false;
   if (save.sound !== undefined && typeof save.sound !== "boolean") return false;
-  if (save.earned !== undefined && (!Array.isArray(save.earned) || !save.earned.every((name) => typeof name === "string"))) return false;
+  if (save.earned !== undefined && (!Array.isArray(save.earned) || new Set(save.earned).size !== save.earned.length || !save.earned.every((name) => typeof name === "string" && ACHIEVEMENT_NAMES.has(name)))) return false;
   if (save.history !== undefined && (!Array.isArray(save.history) || save.history.length > 8 || !save.history.every((entry) => entry && typeof entry === "object" && typeof (entry as Record<string, unknown>).day === "number" && typeof (entry as Record<string, unknown>).text === "string"))) return false;
   if (save.policy !== undefined && !["balanced", "harvest", "arcane"].includes(save.policy as string)) return false;
   if (save.continued !== undefined && typeof save.continued !== "boolean") return false;
+  if (save.nextRequestDay !== undefined && (!Number.isInteger(save.nextRequestDay as number) || (save.nextRequestDay as number) < 1)) return false;
   const ids = new Set<number>();
   const positions = new Set<string>();
   return save.buildings.every((item) => {
@@ -104,10 +132,10 @@ export function isValidSave(value: unknown) {
     const building = item as Record<string, unknown>;
     const id = building.id as number;
     const position = `${building.x},${building.y}`;
-    const valid = typeof id === "number" && BUILDING_KINDS.has(building.kind as string)
-      && typeof building.x === "number" && building.x >= 0 && building.x < 12
-      && typeof building.y === "number" && building.y >= 0 && building.y < 8
-      && typeof building.level === "number" && building.level >= 1 && building.level <= 3;
+    const valid = Number.isInteger(id) && BUILDING_KINDS.has(building.kind as string)
+      && Number.isInteger(building.x as number) && (building.x as number) >= 0 && (building.x as number) < 12
+      && Number.isInteger(building.y as number) && (building.y as number) >= 0 && (building.y as number) < 8
+      && Number.isInteger(building.level as number) && (building.level as number) >= 1 && (building.level as number) <= 3;
     if (!valid || ids.has(id) || positions.has(position)) return false;
     ids.add(id);
     positions.add(position);
@@ -134,7 +162,7 @@ export function calculateJoy(input: {
 
 export function townScore(input: { day: number; renown: number; joy: number; achievements: number; deeds: number }) {
   const paceBonus = Math.max(0, 80 - input.day) * 12;
-  return Math.max(0, Math.round(input.renown * 30 + input.joy * 8 + input.achievements * 175 + input.deeds * 90 + paceBonus));
+  return Math.max(0, Math.round(input.renown * 30 + input.joy * 8 + input.achievements * 175 + Math.min(8, input.deeds) * 90 + paceBonus));
 }
 
 export function scoreTitle(score: number) {

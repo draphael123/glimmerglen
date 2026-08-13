@@ -1,6 +1,8 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { headers } from "next/headers";
 import "./globals.css";
+
+export const viewport: Viewport = { themeColor: "#152820" };
 
 export async function generateMetadata(): Promise<Metadata> {
   const requestHeaders = await headers();
@@ -11,6 +13,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title,
     description,
+    icons: { icon: "/favicon.svg" },
     openGraph: { title, description, images: [`${origin}/og-v2.png`] },
     twitter: { card: "summary_large_image", title, description, images: [`${origin}/og-v2.png`] },
   };

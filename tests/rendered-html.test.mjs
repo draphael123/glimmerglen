@@ -24,6 +24,9 @@ test("server-renders the Glimmerglen game shell", async () => {
   assert.match(html, /Bloom Rite/);
   assert.match(html, /Pilgrims at the south road/);
   assert.match(html, /Open town ledger/);
+  assert.match(html, /href="\/favicon\.svg"/);
+  assert.match(html, /og-v2\.png/);
+  assert.match(html, /name="theme-color" content="#152820"/);
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape|react-loading-skeleton/);
 });
 
