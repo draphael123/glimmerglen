@@ -29,6 +29,7 @@ export function visitorForDay(day: number) {
 }
 
 export function nextVisitorDay(day: number) {
+  if (!Number.isFinite(day)) return null;
   for (let candidate = Math.max(1, Math.floor(day) + 1); candidate <= day + 20; candidate += 1) {
     if (visitorForDay(candidate)) return candidate;
   }
@@ -37,6 +38,10 @@ export function nextVisitorDay(day: number) {
 
 export function requestWaitDays(day: number, nextRequestDay: number) {
   return Math.max(0, Math.ceil(nextRequestDay - day));
+}
+
+export function withinRadius(a: { x: number; y: number }, b: { x: number; y: number }, radius: number) {
+  return Math.hypot(a.x - b.x, a.y - b.y) <= radius;
 }
 
 export function proportionalTrade(available: number, cost: number, reward: number) {

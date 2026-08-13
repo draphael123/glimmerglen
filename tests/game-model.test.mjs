@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { advanceTownDay, buildingProduction, calculateJoy, canAfford, clampResource, cottageResidents, isValidSave, moraleMultiplier, nextVisitorDay, policyModifiers, proportionalTrade, rankMultiplier, requestWaitDays, roadMultiplier, scoreTitle, seasonalFoodIncome, townScore, upgradeSalvage, visitorForDay, wellFoodBonus } from "../app/game-model.ts";
+import { advanceTownDay, buildingProduction, calculateJoy, canAfford, clampResource, cottageResidents, isValidSave, moraleMultiplier, nextVisitorDay, policyModifiers, proportionalTrade, rankMultiplier, requestWaitDays, roadMultiplier, scoreTitle, seasonalFoodIncome, townScore, upgradeSalvage, visitorForDay, wellFoodBonus, withinRadius } from "../app/game-model.ts";
 
 test("affordability checks every requested resource", () => {
   assert.equal(canAfford({ wood: 20, stone: 5 }, { wood: 16, stone: 5 }), true);
@@ -27,6 +27,8 @@ test("story visitors continue to return after the opening chapter", () => {
   assert.equal(nextVisitorDay(1), 7);
   assert.equal(nextVisitorDay(31), 43);
   assert.equal(nextVisitorDay(43), 55);
+  assert.equal(nextVisitorDay(Number.POSITIVE_INFINITY), null);
+  assert.equal(nextVisitorDay(-100), null);
 });
 
 test("town charters offer distinct, explicit tradeoffs", () => {
@@ -133,6 +135,13 @@ test("town requests expose a clear four-day recovery window", () => {
   assert.equal(requestWaitDays(12, 16), 4);
   assert.equal(requestWaitDays(16, 16), 0);
   assert.equal(requestWaitDays(20, 16), 0);
+});
+
+test("well and shrine previews use the same geometric reach as production", () => {
+  const center = { x: 5, y: 5 };
+  assert.equal(withinRadius(center, { x: 7, y: 5 }, 2), true);
+  assert.equal(withinRadius(center, { x: 7, y: 6 }, 2), false);
+  assert.equal(withinRadius(center, { x: 7, y: 6 }, 2.3), true);
 });
 
 test("storm bargains scale down when the town cannot pay the full cost", () => {

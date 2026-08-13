@@ -27,6 +27,7 @@ test("server-renders the Glimmerglen game shell", async () => {
   assert.match(html, /href="\/favicon\.svg"/);
   assert.match(html, /og-v2\.png/);
   assert.match(html, /rel="canonical"/);
+  assert.match(html, /rel="preconnect" href="https:\/\/fonts\.gstatic\.com"/);
   assert.match(html, /name="theme-color" content="#152820"/);
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape|react-loading-skeleton/);
 });
@@ -41,6 +42,7 @@ test("renders an accessible interactive map", async () => {
   assert.match(html, /aria-label="Build Moonwheat Field at 3, 1"/);
   assert.match(html, /aria-label="Pause time"/);
   assert.match(html, /aria-label="Town resources"/);
+  assert.match(html, /aria-pressed="true"/);
   assert.match(html, /role="grid"/);
 });
 
